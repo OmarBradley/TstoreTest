@@ -16,6 +16,7 @@ import com.example.tstoretest.data.TstoreSearchResult;
 import com.example.tstoretest.network.cancel.RequestCancel;
 import com.example.tstoretest.network.okhttpclient.OKHttpClientFactory;
 import com.example.tstoretest.network.okhttpclient.TstoreOkHttpClient;
+import com.example.tstoretest.network.url.URLParameters;
 import com.example.tstoretest.util.functionalinterface.TriConsumer;
 import com.google.gson.Gson;
 
@@ -61,17 +62,9 @@ public class NetworkManager<T> {
         requestCancel = new RequestCancel(client);
     }
 
-    private static final String URL_FORMAT = "http://apis.skplanetx.com/tstore/products";
-
-    public <T> Request getTstoreProduct(Context tag, String url, Map<String, String> headerParameters, Map<String, String> queryParameters, Class<T> jsonDataClass, BiConsumer<Request, T> onSuccess, TriConsumer<Request, Integer, Throwable> onFailure) throws UnsupportedEncodingException {
+    public <T> Request getResult(URLParameters urlParameters, Class<T> resultDataClass, BiConsumer<Request, T> onSuccess, TriConsumer<Request, Integer, Throwable> onFailure) throws UnsupportedEncodingException {
+        Request request = urlParameters.makeRequest();
         Handler handler = new Handler(Looper.getMainLooper());
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
-        Stream.of(queryParameters).forEach(e -> urlBuilder.addQueryParameter(e.getKey(), e.getValue()));
-        Request request = new Request.Builder()
-                .url(urlBuilder.build())
-                .headers(Headers.of(headerParameters))
-                .tag(tag)
-                .build();
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -82,7 +75,7 @@ public class NetworkManager<T> {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 Gson gson = new Gson();
-                T searchResult = gson.fromJson(response.body().charStream(), jsonDataClass);
+                T searchResult = gson.fromJson(response.body().charStream(), resultDataClass);
                 handler.post(() -> {
                     onSuccess.accept(request, searchResult);
                 });
@@ -90,4 +83,7 @@ public class NetworkManager<T> {
         });
         return request;
     }
+
+
+
 }
